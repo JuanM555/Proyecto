@@ -77,7 +77,7 @@ def register_user():
             yag = yagmail.SMTP(os.getenv('EMAIL_USER'), os.getenv('EMAIL_PASS'))
             yag.send(
                 to=email,
-                subject="Verifica tu correo electrónico",
+                subject="¡Bienvenido a SkillSwap! Completa tu registro",
                 contents=f"Haz clic en el siguiente enlace para verificar tu correo: {verification_url}"
             )
             logging.info(f"Correo de verificación enviado a {email}.")
