@@ -30,7 +30,6 @@ def get_db_connection():
         return None
 
 # Ruta para registrar al usuario
-# Ruta para registrar al usuario
 @app.route('/register', methods=['POST'])
 def register_user():
     data = request.get_json()
@@ -43,6 +42,9 @@ def register_user():
     hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
     connection = get_db_connection()
+    if not connection:
+        return jsonify({'message': 'Error al conectar con la base de datos'}), 500
+
     cursor = connection.cursor()
 
     try:
@@ -56,7 +58,7 @@ def register_user():
         token = jwt.encode({'email': email, 'exp': datetime.utcnow() + timedelta(hours=1)}, app.config['SECRET_KEY'], algorithm='HS256')
 
         # Configurar y enviar correo de verificación
-        verification_url = f"http://localhost:3000/verify?token={token}"
+        verification_url = f"https://proyecto-bs4m.onrender.com/verify?token={token}"  
         yag = yagmail.SMTP(os.getenv('EMAIL_USER'), os.getenv('EMAIL_PASS'))
         yag.send(
             to=email,
@@ -66,8 +68,8 @@ def register_user():
 
         return jsonify({'message': 'Usuario registrado, verifica tu correo electrónico'})
     except Error as e:
-        print(f'Error al registrar usuario: {e}')  # Mostrar el error en la consola
-        return jsonify({'message': f'Error al registrar usuario: {str(e)}'}), 500  # Mostrar error específico en respuesta
+        print(f'Error al registrar usuario: {e}')
+        return jsonify({'message': f'Error al registrar usuario: {str(e)}'}), 500
     finally:
         cursor.close()
         connection.close()
@@ -82,6 +84,9 @@ def verify_email():
         email = decoded['email']
 
         connection = get_db_connection()
+        if not connection:
+            return jsonify({'message': 'Error al conectar con la base de datos'}), 500
+
         cursor = connection.cursor()
         cursor.execute("UPDATE user SET email_verified = TRUE WHERE email = %s", (email,))
         connection.commit()
@@ -92,9 +97,12 @@ def verify_email():
     except jwt.InvalidTokenError:
         return jsonify({'message': 'Enlace de verificación inválido'}), 400
     finally:
-        cursor.close()
-        connection.close()
+        if 'cursor' in locals():
+            cursor.close()
+        if 'connection' in locals():
+            connection.close()
 
+# Ruta para iniciar sesión
 @app.route('/login', methods=['POST'])
 def login_user():
     data = request.get_json()
@@ -102,6 +110,9 @@ def login_user():
     password = data.get('password')
 
     connection = get_db_connection()
+    if not connection:
+        return jsonify({'message': 'Error al conectar con la base de datos'}), 500
+
     cursor = connection.cursor(dictionary=True)
 
     try:
@@ -123,6 +134,6 @@ def login_user():
         cursor.close()
         connection.close()
 
-
+# Ejecutar la aplicación
 if __name__ == '__main__':
-    app.run(port=3000)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
