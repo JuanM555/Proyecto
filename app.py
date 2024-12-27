@@ -1,6 +1,7 @@
 import os
 import logging
 from flask import Flask, request, jsonify
+from flask_cors import CORS 
 import mysql.connector
 from mysql.connector import Error
 import bcrypt
@@ -14,6 +15,9 @@ load_dotenv()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('JWT_SECRET')
+
+# Configurar CORS
+CORS(app, resources={r"/*": {"origins": "*"}})  # Permitir todas las solicitudes
 
 # Configurar el log para depuración
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -136,3 +140,4 @@ def verify_email():
 # Ejecutar la aplicación
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+
