@@ -1,0 +1,78 @@
+    /* Background for the entire page */
+    body {
+      height: 100vh;
+      background-image: url('../images/9165640.jpg');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+    }
+      /* Card styling */
+      .login-card {
+        width: 100%;
+        max-width: 400px;
+        border: none;
+        border-radius: 8px;
+        box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+      }
+      
+      /* Primary color (Lavender) */
+      .btn-primary {
+        background-color: rgb(128, 108, 187);
+        border-color: rgb(128, 108, 187);
+      }
+      
+      .btn-primary:hover {
+        background-color: rgb(108, 88, 167);
+        border-color: rgb(108, 88, 167);
+      }
+      
+      /* Card and text colors */
+      h3 {
+        color: rgb(128, 108, 187);
+      }
+      
+      .text-muted {
+        color: #AEC6CF;
+      }
+      
+      .form-control {
+        border: 1px solid #CBC3E3;
+        border-radius: 4px;
+      }
+      
+      .form-control:focus {
+        border-color: rgb(128, 108, 187);
+        box-shadow: none;
+      }
+      
+      /* Link hover color */
+      .text-muted:hover {
+        color: rgb(128, 108, 187);
+      }
+      
+
+ /* Modal de carga */
+ .modal {
+  display: none; /* Inicialmente oculto */
+  position: fixed;
+  z-index: 1050; /* Bootstrap modals */
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.5); /* Fondo oscuro */
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.modal-content {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.spinner-border {
+  margin-top: 20px;
+}
