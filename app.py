@@ -122,56 +122,109 @@ def register_user():
         cursor.close()
         connection.close()
 
-# Ruta para verificar el correo
+@app.route('/verification_result')
+def verification_result():
+    """
+    Renderiza la página de resultado de verificación.
+    Esta ruta sirve el HTML para mostrar el resultado de la verificación.
+    """
+    return """
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificación de Correo</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body>
+    <div class="container d-flex align-items-center justify-content-center min-vh-100">
+        <div class="card p-5 text-center shadow-lg" style="max-width: 500px;">
+            <div class="card-body">
+                <i id="status-icon" class="bi" style="font-size: 4rem;"></i>
+                <h2 id="status-title" class="mt-3"></h2>
+                <p id="status-message" class="mt-3"></p>
+                <a href="/pages/auth/login.html" id="action-button" class="btn btn-primary mt-4">Iniciar Sesión</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const status = urlParams.get('status');
+        
+        const statusIcon = document.getElementById('status-icon');
+        const statusTitle = document.getElementById('status-title');
+        const statusMessage = document.getElementById('status-message');
+        const actionButton = document.getElementById('action-button');
+
+        switch(status) {
+            case 'success':
+                statusIcon.classList.add('bi-check-circle-fill', 'text-success');
+                statusTitle.textContent = '¡Verificación Exitosa!';
+                statusMessage.textContent = 'Gracias por verificar tu correo electrónico. Ahora puedes disfrutar de todos los beneficios de SkillSwap.';
+                actionButton.style.display = 'block';
+                break;
+            case 'expired':
+                statusIcon.classList.add('bi-exclamation-triangle-fill', 'text-warning');
+                statusTitle.textContent = '¡Enlace Expirado!';
+                statusMessage.textContent = 'El enlace de verificación ha expirado. Por favor, solicita uno nuevo.';
+                actionButton.style.display = 'none';
+                break;
+            case 'invalid':
+                statusIcon.classList.add('bi-x-circle-fill', 'text-danger');
+                statusTitle.textContent = '¡Enlace Inválido!';
+                statusMessage.textContent = 'El enlace de verificación no es válido. Por favor, solicita uno nuevo.';
+                actionButton.style.display = 'none';
+                break;
+            default:
+                statusIcon.classList.add('bi-exclamation-triangle-fill', 'text-danger');
+                statusTitle.textContent = '¡Error de Verificación!';
+                statusMessage.textContent = 'Hubo un problema con la verificación de tu correo. Por favor, intenta nuevamente.';
+                actionButton.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
+    """
+
 @app.route('/verify', methods=['GET'])
 def verify_email():
     """
     Verifica el correo electrónico del usuario utilizando un token.
-    1. Decodifica el token JWT recibido.
-    2. Actualiza el estado de verificación del correo en la base de datos.
-    3. Redirige al usuario dependiendo del estado del token.
+    Redirige a la página de resultado de verificación según el caso.
     """
     token = request.args.get('token')
     logging.debug(f"Token recibido para verificación: {token}")
 
     try:
-        # Decodificación del token
         decoded = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
         email = decoded['email']
-        logging.info(f"Token decodificado correctamente. Email: {email}")
-
-        # Conexión a la base de datos
+        
         connection = get_db_connection()
         if not connection:
-            return jsonify({'code': 'DB001', 'message': 'Error al conectar con la base de datos'}), 500
+            return redirect('/verification_result?status=error')
 
         cursor = connection.cursor()
-
-        # Actualizar el estado de verificación del correo
         cursor.execute("UPDATE user SET email_verified = TRUE WHERE email = %s", (email,))
         connection.commit()
-        logging.info(f"Correo {email} verificado en la base de datos.")
-
-        # Redirigir a la página HTML de verificación exitosa
-        return redirect(f"/verification_result?status=success")
+        
+        return redirect('/verification_result?status=success')
 
     except jwt.ExpiredSignatureError:
         logging.warning("[JWT001] El token ha expirado.")
-        # Redirigir a la página HTML con error de expiración
-        return redirect(f"/verification_result?status=expired")
+        return redirect('/verification_result?status=expired')
 
     except jwt.InvalidTokenError:
         logging.error("[JWT002] El token es inválido.")
-        # Redirigir a la página HTML con error de token inválido
-        return redirect(f"/verification_result?status=invalid")
+        return redirect('/verification_result?status=invalid')
 
     except Exception as e:
         logging.error(f"[VERIFY001] Error desconocido en la verificación de correo: {e}")
-        # Redirigir a la página HTML con error general
-        return redirect(f"/verification_result?status=error")
+        return redirect('/verification_result?status=error')
 
     finally:
-        # Cerrar el cursor y la conexión si están abiertos
         if 'cursor' in locals():
             cursor.close()
         if 'connection' in locals():
