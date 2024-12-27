@@ -319,16 +319,56 @@ def reset_password():
             email = decoded['email']
             # Mostrar la página para restablecer la contraseña (puedes mostrar un formulario aquí)
             return """
-            <html>
-                <body>
-                    <h2>Restablecer Contraseña</h2>
-                    <form action="/reset-password" method="POST">
-                        <input type="hidden" name="token" value="{}">
-                        <label for="newPassword">Nueva Contraseña:</label>
-                        <input type="password" name="newPassword" required>
-                        <button type="submit">Restablecer Contraseña</button>
-                    </form>
-                </body>
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Restablecer Contraseña - SkillSwap</title>
+            <!-- Bootstrap CSS -->
+            <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+            <!-- Custom CSS -->
+            <link rel="stylesheet" href="/SkillSwap/assets/css/style.css">
+            </head>
+            <body>
+            <div class="container d-flex align-items-center justify-content-center min-vh-100">
+                <div class="card login-card p-4">
+                <h3 class="font-weight-bold mb-4 text-center">Restablecer Contraseña</h3>
+                <form action="/reset-password" method="POST" id="resetPasswordForm">
+                    <input type="hidden" name="token" value="{token}">
+                    <div class="form-group">
+                    <label for="newPassword" class="form-label fw-semibold">Nueva Contraseña</label>
+                    <input type="password" class="form-control border-primary-subtle" name="newPassword" id="newPassword" required minlength="8" placeholder="Mínimo 8 caracteres">
+                    </div>
+                    <div class="form-group">
+                    <label for="confirmPassword" class="form-label fw-semibold">Confirmar Contraseña</label>
+                    <input type="password" class="form-control border-primary-subtle" id="confirmPassword" required placeholder="Reingresa tu contraseña">
+                    <small id="passwordError" class="form-text text-danger" style="display: none;">Las contraseñas no coinciden.</small>
+                    </div>
+                    <div class="mx-5 px-2">
+                    <button type="submit" class="btn btn-primary btn-block mt-2">Restablecer Contraseña</button>
+                    <button type="button" class="btn btn-secondary btn-block mt-2" onclick="window.location.href='/login'">Cancelar</button>
+                    </div>
+                </form>
+                </div>
+            </div>
+
+            <!-- Bootstrap JS and dependencies -->
+            <script>
+                document.getElementById('resetPasswordForm').addEventListener('submit', function(event) {
+                const newPassword = document.getElementById('newPassword').value;
+                const confirmPassword = document.getElementById('confirmPassword').value;
+                if (newPassword !== confirmPassword) {
+                    event.preventDefault();
+                    document.getElementById('passwordError').style.display = 'block';
+                } else {
+                    document.getElementById('passwordError').style.display = 'none';
+                }
+                });
+            </script>
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+            </body>
             </html>
             """.format(token)
 
