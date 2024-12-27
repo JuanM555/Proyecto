@@ -145,6 +145,7 @@ def verification_result():
                 <i id="status-icon" class="bi" style="font-size: 4rem;"></i>
                 <h2 id="status-title" class="mt-3"></h2>
                 <p id="status-message" class="mt-3"></p>
+                <img src="/assets/images/Logo.png" alt="SkillSwap Logo" width="50" height="50" class="d-inline-block align-text-top">
                 <a href="https://juanm555.github.io/SkillSwap/pages/auth/login.html" id="action-button" class="btn btn-primary mt-4">Iniciar Sesión</a>
             </div>
         </div>
