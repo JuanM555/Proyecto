@@ -230,6 +230,148 @@ def verify_email():
         if 'connection' in locals():
             connection.close()
 
+
+@app.route('/recover_password', methods=['POST'])
+def recover_password():
+    """
+    Recupera la contraseña de un usuario enviando un enlace de restablecimiento.
+    1. Verifica si el correo existe.
+    2. Genera un token de restablecimiento y lo envía por correo.
+    """
+    data = request.get_json()
+    email = data.get('email')
+
+    if not email:
+        logging.warning("[RECOVER001] El correo es obligatorio.")
+        return jsonify({'code': 'RECOVER001', 'message': 'El correo es obligatorio'}), 400
+
+    # Verificar si el correo existe en la base de datos
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({'code': 'DB001', 'message': 'Error al conectar con la base de datos'}), 500
+
+    cursor = connection.cursor()
+
+    try:
+        cursor.execute("SELECT * FROM user WHERE email = %s", (email,))
+        user = cursor.fetchone()
+
+        if not user:
+            logging.warning(f"[RECOVER002] El correo {email} no está registrado.")
+            return jsonify({'code': 'RECOVER002', 'message': 'El correo no está registrado'}), 404
+
+        # Generación del token para restablecer la contraseña
+        token = jwt.encode({'email': email, 'exp': datetime.utcnow() + timedelta(hours=1)}, app.config['SECRET_KEY'], algorithm='HS256')
+        logging.info(f"Token generado para {email}: {token}")
+
+        # Configurar y enviar el correo de recuperación
+        reset_url = f"https://proyecto-bs4m.onrender.com/reset-password?token={token}"
+        try:
+            yag = yagmail.SMTP(os.getenv('EMAIL_USER'), os.getenv('EMAIL_PASS'))
+            yag.send(
+                to=email,
+                subject="Restablece tu contraseña en SkillSwap",
+                contents=f"Haz clic en el siguiente enlace para restablecer tu contraseña: {reset_url}"
+            )
+            logging.info(f"Correo de recuperación enviado a {email}.")
+        except Exception as email_error:
+            logging.error(f"[EMAIL002] Error al enviar el correo de recuperación: {email_error}")
+            return jsonify({'code': 'EMAIL002', 'message': 'Error al enviar el correo de recuperación'}), 500
+
+        return jsonify({'message': 'Correo de recuperación enviado exitosamente. Por favor, revisa tu correo electrónico para restablecer la contraseña.'})
+
+    except Error as db_error:
+        logging.error(f'[DB002] Error al acceder a la base de datos: {db_error}')
+        return jsonify({'code': 'DB002', 'message': f'Error al acceder a la base de datos: {str(db_error)}'}), 500
+
+    except Exception as e:
+        logging.error(f"[RECOVER003] Error inesperado en la recuperación de contraseña: {e}")
+        return jsonify({'code': 'RECOVER003', 'message': 'Error inesperado al procesar la solicitud'}), 500
+
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'connection' in locals():
+            connection.close()
+
+@app.route('/reset-password', methods=['GET', 'POST'])
+def reset_password():
+    """
+    Permite al usuario restablecer su contraseña mediante un token.
+    1. Verifica el token de restablecimiento.
+    2. Permite cambiar la contraseña.
+    """
+    token = request.args.get('token')
+    if request.method == 'GET':
+        # Validar el token
+        try:
+            decoded = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+            email = decoded['email']
+            # Mostrar la página para restablecer la contraseña (puedes mostrar un formulario aquí)
+            return """
+            <html>
+                <body>
+                    <h2>Restablecer Contraseña</h2>
+                    <form action="/reset-password" method="POST">
+                        <input type="hidden" name="token" value="{}">
+                        <label for="newPassword">Nueva Contraseña:</label>
+                        <input type="password" name="newPassword" required>
+                        <button type="submit">Restablecer Contraseña</button>
+                    </form>
+                </body>
+            </html>
+            """.format(token)
+
+        except jwt.ExpiredSignatureError:
+            logging.warning("[JWT003] El token ha expirado.")
+            return jsonify({'code': 'JWT003', 'message': 'El token ha expirado'}), 400
+
+        except jwt.InvalidTokenError:
+            logging.error("[JWT004] El token es inválido.")
+            return jsonify({'code': 'JWT004', 'message': 'El token es inválido'}), 400
+
+    elif request.method == 'POST':
+        new_password = request.form.get('newPassword')
+        token = request.form.get('token')
+
+        if not new_password:
+            return jsonify({'code': 'RECOVER004', 'message': 'La nueva contraseña es obligatoria'}), 400
+
+        # Validar el token y obtener el correo
+        try:
+            decoded = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+            email = decoded['email']
+
+            # Hashear la nueva contraseña
+            hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
+
+            # Actualizar la contraseña en la base de datos
+            connection = get_db_connection()
+            if not connection:
+                return jsonify({'code': 'DB001', 'message': 'Error al conectar con la base de datos'}), 500
+
+            cursor = connection.cursor()
+            cursor.execute("UPDATE user SET password = %s WHERE email = %s", (hashed_password, email))
+            connection.commit()
+
+            logging.info(f"Contraseña de {email} actualizada exitosamente.")
+            return jsonify({'message': 'Contraseña restablecida con éxito. Ahora puedes iniciar sesión.'})
+
+        except jwt.ExpiredSignatureError:
+            logging.warning("[JWT003] El token ha expirado.")
+            return jsonify({'code': 'JWT003', 'message': 'El token ha expirado'}), 400
+
+        except jwt.InvalidTokenError:
+            logging.error("[JWT004] El token es inválido.")
+            return jsonify({'code': 'JWT004', 'message': 'El token es inválido'}), 400
+
+        except Exception as e:
+            logging.error(f"[RECOVER005] Error inesperado al restablecer la contraseña: {e}")
+            return jsonify({'code': 'RECOVER005', 'message': 'Error inesperado al restablecer la contraseña'}), 500
+
+    return jsonify({'code': 'RECOVER006', 'message': 'Método no permitido'}), 405
+
+
 # Ejecutar la aplicación
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
