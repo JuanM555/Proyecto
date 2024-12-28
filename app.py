@@ -322,6 +322,88 @@ def reset_password():
     2. Permite cambiar la contraseña.
     """
     token = request.args.get('token')
+
+    if request.method == 'GET':
+        # Validar el token
+        try:
+            decoded = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+            email = decoded['email']
+            return """
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+                <meta charset="UTF-8">
+                <title>Restablecer Contraseña</title>
+                <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+            </head>
+            <body>
+                <div class="container mt-5">
+                    <h2 class="text-center">Restablecer Contraseña</h2>
+                    <form method="POST" action="/reset-password?token={}">
+                        <div class="form-group">
+                            <label for="password">Nueva Contraseña:</label>
+                            <input type="password" id="password" name="password" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="confirm_password">Confirmar Contraseña:</label>
+                            <input type="password" id="confirm_password" name="confirm_password" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block">Restablecer</button>
+                    </form>
+                </div>
+            </body>
+            </html>
+            """.format(token)
+        except jwt.ExpiredSignatureError:
+            return redirect('/verification_result?status=expired')
+        except jwt.InvalidTokenError:
+            return redirect('/verification_result?status=invalid')
+
+    elif request.method == 'POST':
+        # Procesar la nueva contraseña
+        try:
+            decoded = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+            email = decoded['email']
+
+            # Obtener contraseñas desde el formulario
+            password = request.form.get('password')
+            confirm_password = request.form.get('confirm_password')
+
+            if not password or not confirm_password:
+                return "Por favor, completa todos los campos.", 400
+
+            if password != confirm_password:
+                return "Las contraseñas no coinciden.", 400
+
+            # Hashear la nueva contraseña
+            hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+
+            # Actualizar la contraseña en la base de datos
+            connection = get_db_connection()
+            if not connection:
+                return jsonify({'code': 'DB001', 'message': 'Error al conectar con la base de datos'}), 500
+
+            cursor = connection.cursor()
+            cursor.execute(
+                "UPDATE user SET password = %s WHERE email = %s",
+                (hashed_password, email)
+            )
+            connection.commit()
+            return redirect('/verification_result?status=success')
+
+        except jwt.ExpiredSignatureError:
+            return redirect('/verification_result?status=expired')
+        except jwt.InvalidTokenError:
+            return redirect('/verification_result?status=invalid')
+        except Exception as e:
+            logging.error(f"[RESET002] Error durante el restablecimiento de contraseña: {e}")
+            return "Error al restablecer la contraseña.", 500
+    """
+    Permite al usuario restablecer su contraseña mediante un token.
+    1. Verifica el token de restablecimiento.
+    2. Permite cambiar la contraseña.
+    """
+    token = request.args.get('token')
     if request.method == 'GET':
         # Validar el token
         try:
