@@ -77,7 +77,7 @@ def register_user():
 
     cursor = connection.cursor()
 
-        try:
+    try:
         # Inserción en la base de datos
         cursor.execute(
             "INSERT INTO user (username, email, password, user_type, email_verified) VALUES (%s, %s, %s, %s, %s)",
