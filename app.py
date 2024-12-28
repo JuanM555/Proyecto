@@ -77,7 +77,7 @@ def register_user():
 
     cursor = connection.cursor()
 
-    try:
+        try:
         # Inserción en la base de datos
         cursor.execute(
             "INSERT INTO user (username, email, password, user_type, email_verified) VALUES (%s, %s, %s, %s, %s)",
@@ -110,8 +110,18 @@ def register_user():
         return jsonify({'message': 'Usuario registrado exitosamente. Por favor, verifica tu correo electrónico para completar el registro.'})
 
     except Error as db_error:
-        logging.error(f'[DB002] Error al registrar usuario en la base de datos: {db_error}')
-        return jsonify({'code': 'DB002', 'message': f'Error al registrar usuario: {str(db_error)}'}), 500
+        if db_error.errno == 1062:  # Código de error para entradas duplicadas
+            logging.warning(f"[DB003] El correo {email} ya está registrado.")
+            return jsonify({
+                'code': 'DB003',
+                'message': (
+                    f"El correo '{email}' ya está registrado. "
+                    "Por favor, utiliza un correo diferente o solicita la recuperación de contraseña si no puedes ingresar."
+                )
+            }), 409  # Código de estado 409 para conflictos
+        else:
+            logging.error(f'[DB002] Error al registrar usuario en la base de datos: {db_error}')
+            return jsonify({'code': 'DB002', 'message': f'Error al registrar usuario: {str(db_error)}'}), 500
 
     except Exception as e:
         logging.error(f"[REG003] Error inesperado: {e}")
